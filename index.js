@@ -5,20 +5,16 @@ const env = process.env;
 const TelegramBot = require('node-telegram-bot-api');
 const bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, {polling: true});
 // Define a function to scrape data from the API and log a message to the console
-let oldblockNumber = 319000;
+let oldblockNumber = 392208;
 const scrapeAndLogMessage = async () => {
+  const blockNumberResponse = await axios.get('https://zksync2-mainnet.zkscan.io/api?module=block&action=eth_block_number');
+  const blockNumberHex = blockNumberResponse.data.result;
+  const blockNumbernow = parseInt(blockNumberHex, 16); // initialize oldblockNumber to 100 blocks lower than blockNumbernow
+
+  console.log('Scanning from Block: '+ oldblockNumber);
+  console.log('to Block: '+blockNumbernow);
     
   try {
-    // Scrape the block number from the API and convert it to a decimal number
-    const blockNumberResponse = await axios.get('https://zksync2-mainnet.zkscan.io/api?module=block&action=eth_block_number');
-    const blockNumberHex = blockNumberResponse.data.result;
-    const blockNumbernow = parseInt(blockNumberHex, 16);
-    console.log('Scanning from Block: '+ oldblockNumber);
-    console.log('to Block: '+blockNumbernow);
-    
-    
-
-    // // Construct the URL for the getLogs endpoint with the block number as a parameter
     const getLogsUrl = `https://zksync2-mainnet.zkscan.io/api?module=logs&action=getLogs&fromBlock=${oldblockNumber}&toBlock=${blockNumbernow}&topic0=0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0`;
     
     // // Scrape the data from the getLogs endpoint to obtain the contract address
@@ -44,9 +40,14 @@ const scrapeAndLogMessage = async () => {
     const dexscreenerchart = `https://dexscreener.com/defi/zksync/${contractAddress}`
     const linktoken = `https://explorer.zksync.io/address/${contractAddress}`
     // console.log(linktoken);
-    const tokenSymbol = getTokenResponse.data.result.symbol;
-    // console.log(emoji.get('rocket')+" NEW TOKEN CREATED "+emoji.get('rocket'));
-    // console.log('   '+emoji.get('moneybag')+'Token Symbol :' +tokenSymbol);
+    let tokenSymbol = 'unknown';
+    if (getTokenResponse.data.result.symbol != undefined || null) {
+      tokenSymbol = getTokenResponse.data.result.symbol;
+    }
+    //if tokensymbol is undefined or null its no problem
+
+    console.log(emoji.get('rocket')+" NEW TOKEN CREATED "+emoji.get('rocket'));
+    console.log('   '+emoji.get('moneybag')+'Token Symbol :' +tokenSymbol);
     const tokenName = getTokenResponse.data.result.name;
     // console.log('   '+emoji.get('trident')+' Token Name : ' +tokenName);
     const tokenDecimals = getTokenResponse.data.result.decimals;
@@ -75,10 +76,12 @@ const scrapeAndLogMessage = async () => {
     oldblockNumber = blockNumbernow;
     // Log the message to the console
   } catch (error) {
+    console.log(error)
     console.log("no new token")
+    oldblockNumber = blockNumbernow;
     // console.log(error);
   }
 };
 
 // Set up a loop to periodically scrape data and log messages to the console
-setInterval(scrapeAndLogMessage, 4000); // Scrape every 3 minutes
+setInterval(scrapeAndLogMessage, 10000); // Scrape every 3 minutes
